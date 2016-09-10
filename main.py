@@ -189,7 +189,7 @@ def process_response(r):
 				j =  json.loads(payload.get_payload())
 				if debug: print("{}JSON String Returned:{} {}".format(bcolors.OKBLUE, bcolors.ENDC, json.dumps(j)))
 			elif payload.get_content_type() == "audio/mpeg":
-				filename = path + "tmpcontent/"+payload.get('Content-ID').strip("<>")+".mp3"
+				filename = path + "tmpcontent/"+payload.get('Content-ID').strip("<>").replace(":","")+".mp3"
 				with open(filename, 'wb') as f:
 					f.write(payload.get_payload())
 			else:
@@ -203,7 +203,7 @@ def process_response(r):
 				if directive['namespace'] == 'SpeechSynthesizer':
 					if directive['name'] == 'speak':
 						GPIO.output(rec_light, GPIO.LOW)
-						play_audio(path + "tmpcontent/"+directive['payload']['audioContent'].lstrip("cid:")+".mp3")
+						play_audio(path + "tmpcontent/"+directive['payload']['audioContent'].lstrip("cid:").replace(":","")+".mp3")
 					elif directive['name'] == 'listen':
 						#listen for input - need to implement silence detection for this to be used.
 						if debug: print("{}Further Input Expected, timeout in: {} {}ms".format(bcolors.OKBLUE, bcolors.ENDC, directive['payload']['timeoutIntervalInMillis']))
@@ -216,7 +216,7 @@ def process_response(r):
 								streamid = stream['streamId']
 								playBehavior = directive['payload']['playBehavior']
 							if stream['streamUrl'].startswith("cid:"):
-								content = path + "tmpcontent/"+stream['streamUrl'].lstrip("cid:")+".mp3"
+								content = path + "tmpcontent/"+stream['streamUrl'].lstrip("cid:").replace(":","")+".mp3"
 							else:
 								content = stream['streamUrl']
 							pThread = threading.Thread(target=play_audio, args=(content, stream['offsetInMilliseconds']))
@@ -227,7 +227,7 @@ def process_response(r):
 				if stream['progressReportRequired']:
 					streamid = stream['streamId']
 				if stream['streamUrl'].startswith("cid:"):
-					content = path + "tmpcontent/"+stream['streamUrl'].lstrip("cid:")+".mp3"
+					content = path + "tmpcontent/"+stream['streamUrl'].lstrip("cid:").replace(":","")+".mp3"
 				else:
 					content = stream['streamUrl']
 				pThread = threading.Thread(target=play_audio, args=(content, stream['offsetInMilliseconds']))
@@ -254,13 +254,36 @@ def process_response(r):
 
 
 def tuneinplaylist(url):
+	import sd
+	
+	sd = sd.StationDigger()
+	url = sd.traverseAlexa(url)
+	#return url
+	#"""
+
+	import re
+	import urllib2
+
 	req = requests.get(url)
 	r = requests.get(req.content)
-	for line in r.content.split('\n'):
-		if line.startswith('File'):
-			list = line.split("=")[1:]
-			nurl = "=".join(list)
-			return nurl
+	html = r.content
+	urls = re.findall('http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', html)
+	if urls != None:	
+		for url in urls:
+			print "TuneIn Resolved URL:"
+			print url
+			return url
+	else:
+		return "no-file-found.mp3"
+
+#	for line in r.content.split('\n'):
+#		if line.startswith('File'):
+#			print (line)			
+#			list = line.split("=")[1:]
+#			print (list)
+#			nurl = "=".join(list)
+#			print (nurl)
+#			return nurl
 
 def play_audio(file, offset=0):
 	if file.startswith('http://opml.radiotime.com'):
@@ -269,15 +292,16 @@ def play_audio(file, offset=0):
 	if debug: print("{}Play_Audio Request for:{} {}".format(bcolors.OKBLUE, bcolors.ENDC, file))
 	GPIO.output(plb_light, GPIO.HIGH)
 	#i = vlc.Instance('--aout=alsa')
-	i = vlc.Instance('--aout=alsa', '--alsa-audio-device=hw:2,0=audiocodec,DEV=0')
+	i = vlc.Instance('--aout=alsa', '--alsa-audio-device=hw:2,0')
 	m = i.media_new(file)
+	print (file)
 	p = i.media_player_new()
 	p.set_media(m)
 	mm = m.event_manager()
-	mm.event_attach(vlc.EventType.MediaStateChanged, state_callback, p)
 	audioplaying = True
 	p.audio_set_volume(100)
 	p.play()
+	mm.event_attach(vlc.EventType.MediaStateChanged, state_callback, p)
 	while audioplaying:
 		continue
 	GPIO.output(plb_light, GPIO.LOW)
@@ -361,8 +385,7 @@ def start():
 	global audioplaying, p
 	while True:
 		print("{}Ready to Record.{}".format(bcolors.OKBLUE, bcolors.ENDC))
-		GPIO.wait_for_edge(button, GPIO.FALLING) # we wait for the button to be pressed
-		if audioplaying: p.stop()
+		#GPIO.wait_for_edge(button, GPIO.FALLING) # we wait for the button to be pressed
 		print("{}Recording...{}".format(bcolors.OKBLUE, bcolors.ENDC))
 		GPIO.output(rec_light, GPIO.HIGH)
 		inp = alsaaudio.PCM(alsaaudio.PCM_CAPTURE, alsaaudio.PCM_NORMAL, device)
@@ -372,6 +395,7 @@ def start():
 		inp.setperiodsize(500)
 		audio = ""
 		while(GPIO.input(button)==0): # we keep recording while the button is pressed
+			if audioplaying: p.stop()
 			l, data = inp.read()
 			if l:
 				audio += data
@@ -389,14 +413,14 @@ def setup():
 	#GPIO.setmode(GPIO.BCM)
 	GPIO.init()
 	#GPIO.setup(button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    GPIO.setcfg(button, gpio.INPUT)
-    GPIO.pullup(button, gpio.PULLUP)
+	GPIO.setcfg(button, GPIO.INPUT)
+	GPIO.pullup(button, GPIO.PULLUP)
 	#GPIO.setup(lights, GPIO.OUT)
-    gpio.setcfg(lights[0], gpio.OUTPUT)
-    gpio.setcfg(lights[1], gpio.OUTPUT)
+	GPIO.setcfg(lights[0], GPIO.OUTPUT)
+	GPIO.setcfg(lights[1], GPIO.OUTPUT)
 	#GPIO.output(lights, GPIO.LOW)
-    gpio.output(lights[0], gpio.LOW)
-    gpio.output(lights[1], gpio.LOW)
+	GPIO.output(lights[0], GPIO.LOW)
+	GPIO.output(lights[1], GPIO.LOW)
 	while internet_on() == False:
 		print(".")
 	token = gettoken()
@@ -418,3 +442,4 @@ def setup():
 if __name__ == "__main__":
 	setup()
 	start()
+
