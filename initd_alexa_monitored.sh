@@ -16,7 +16,12 @@ case "$1" in
 start)
     echo "Starting Alexa..."
     python /root/AlexaPi/main.py &
+    /root/AlexaPi/monitorAlexa.sh &
+;;
 
+silent)
+    echo "Starting Alexa in silent mode..."
+    python /root/AlexaPi/main.py -s &
 ;;
 
 stop)
@@ -32,6 +37,6 @@ restart|force-reload)
         echo "Restarted."
 ;;
 *)
-        echo "Usage: $0 {start|stop|restart}"
+        echo "Usage: $0 {start|silent|stop|restart}"
         exit 1
 esac

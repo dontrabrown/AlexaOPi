@@ -7,6 +7,7 @@ import requests
 import json
 from creds import *
 import urllib
+import socket
 
 class Start(object):
 	def index(self):
@@ -35,11 +36,16 @@ class Start(object):
 		line = 'refresh_token = "{}"'.format(resp['refresh_token'])
 		with open("creds.py", 'a') as f:
 			f.write(line)
-		return "Success!, refresh token has been added to your creds file, you may now reboot the Pi <br>{}".format(resp['refresh_token'])
+		return "<h2>Success!</h2><h3> Refresh token has been added to your creds file, you may now reboot the Pi </h3><br>{}".format(resp['refresh_token'])
 	index.exposed = True
 	code.exposed = True
 		
 cherrypy.config.update({'server.socket_host': '0.0.0.0',})
-cherrypy.config.update({'server.socket_port': int(os.environ.get('PORT', '5000')),})
+cherrypy.config.update({'server.socket_port': int(os.environ.get('PORT', '5050')),})
+cherrypy.config.update({ "environment": "embedded" })
+
+
+ip =[(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]
+print "Ready goto http://{}:5050 or http://localhost:5050  to begin the auth process".format(ip) 
 cherrypy.quickstart(Start())
 
