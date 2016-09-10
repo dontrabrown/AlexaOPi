@@ -531,7 +531,7 @@ def silence_listener(triggeredbyvoice):
             GPIO.output(rec_light, GPIO.HIGH)
 
     print ("End recording")
-    play_audio(path+'beep.wav')
+    play_audio(path+'resources/r2-ok.mp3')
 
     if debug: play_audio(path+'beep.wav', 0, 100)
     stream.close()
