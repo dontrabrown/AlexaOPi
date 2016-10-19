@@ -10,18 +10,18 @@
 # Description:       Start / Stop AlexaPi Service
 ### END INIT INFO
 
-exec > /var/log/alexa.log 2>&1 
+exec > /var/log/alexa.log 2>&1
 case "$1" in
 
 start)
     echo "Starting Alexa..."
-    python /root/AlexaPi/main.py &
+    python /opt/AlexaPi/start.py /opt/AlexaPi/Artoo.pmdl &
 
 ;;
 
 stop)
     echo "Stopping Alexa.."
-    pkill -f AlexaPi\/main\.py
+    pkill -f AlexaPi\/start\.py
 ;;
 
 restart|force-reload)
