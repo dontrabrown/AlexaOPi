@@ -2,10 +2,10 @@
 
 import logging
 import os
-import random
 import time
 #import RPi.GPIO as GPIO
 from pyA20.gpio import gpio as GPIO
+from pyA20.gpio import port
 import pyaudio
 import wave
 from creds import *
@@ -15,24 +15,14 @@ import re
 from memcache import Client
 import vlc
 import threading
-import cgi
 import email
 import optparse
-#import getch
 import sys
-import fileinput
-import datetime
 import snowboydecoder
 import snowboydetect
-
-import sys
 import signal
 
 import tunein
-#import webrtcvad
-
-# from pocketsphinx.pocketsphinx import *
-# from sphinxbase.sphinxbase import *
 
 # record format
 FORMAT = pyaudio.paInt16
@@ -44,9 +34,9 @@ WAVE_OUTPUT_FILENAME = "recording.wav"
 audio = pyaudio.PyAudio()
 
 # Settings
-button = 18  # GPIO Pin with button connected
-plb_light = 24  # GPIO Pin for the playback/activity light
-rec_light = 25  # GPIO Pin for the recording light
+button = port.PA20  # GPIO Pin with button connected
+plb_light = port.PA9		# GPIO Pin for the playback/activity light
+rec_light = port.PA8		# GPIO Pin for the recording light
 lights = [plb_light, rec_light]  # GPIO Pins with LED's connected
 device = "plughw:0"  # Name of your microphone/sound card in arecord -L
 
@@ -87,15 +77,9 @@ audioplaying = False
 button_pressed = False
 start = time.time()
 tunein_parser = tunein.TuneIn(5000)
-#vad = webrtcvad.Vad(2)
 currVolume = 100
 
 # constants
-VAD_SAMPLERATE = 16000
-VAD_FRAME_MS = 30
-VAD_PERIOD = (VAD_SAMPLERATE / 1000) * VAD_FRAME_MS
-VAD_SILENCE_TIMEOUT = 1000
-VAD_THROWAWAY_FRAMES = 10
 MAX_RECORDING_LENGTH = 6
 MAX_VOLUME = 100
 MIN_VOLUME = 30
@@ -367,7 +351,7 @@ def process_response(r):
     else:
         print("{}(process_response Error){} Status Code: {}".format(bcolors.WARNING, bcolors.ENDC, r.status_code))
         r.connection.close()
-        GPIO.output(lights, GPIO.LOW)
+        GPIO.output(rec_light, GPIO.LOW)
         for x in range(0, 3):
             time.sleep(.2)
             GPIO.output(rec_light, GPIO.HIGH)
@@ -383,7 +367,7 @@ def play_audio(file=DETECT_DING, offset=0, overRideVolume=0):
     if debug: print("{}Play_Audio Request for:{} {}".format(bcolors.OKBLUE, bcolors.ENDC, file))
     GPIO.output(plb_light, GPIO.HIGH)
     #i = vlc.Instance('--aout=alsa')  # , '--alsa-audio-device=mono', '--file-logging', '--logfile=vlc-log.txt')
-    i = vlc.Instance('--aout=alsa', '--alsa-audio-device=hw:2,0')
+    i = vlc.Instance('--aout=alsa', '--alsa-audio-device=hw:0,0')
     m = i.media_new(file)
     p = i.media_player_new()
     p.set_media(m)
@@ -515,19 +499,6 @@ def silence_listener(triggeredbyvoice):
         while button_pressed or ((time.time() - start) < MAX_RECORDING_LENGTH):
             data = stream.read(CHUNK, exception_on_overflow=False)
             framerec.append(data)
-            # isSpeech = vad.is_speech(data, VAD_SAMPLERATE)
-            #
-            # if (isSpeech == False):
-            #     silenceRun = silenceRun + 1
-            #     print "0"
-            # else:
-            #     silenceRun = 0
-            #     numSilenceRuns = numSilenceRuns + 1
-            #     print "1"
-            # only count silence runs after the first one
-            # (allow user to speak for total of max recording length if they haven't said anything yet)
-            # if (numSilenceRuns != 0) and ((silenceRun * VAD_FRAME_MS) > VAD_SILENCE_TIMEOUT):
-            #     thresholdSilenceMet = True
             GPIO.output(rec_light, GPIO.HIGH)
 
     print ("End recording")
@@ -548,8 +519,6 @@ def silence_listener(triggeredbyvoice):
 
 def start(triggerword=False):
     global audioplaying, p, button_pressed
-    if not triggerword:
-        GPIO.add_event_detect(button, GPIO.FALLING, callback=detect_button, bouncetime=100)  # threaded detection of button press
 
     while True:
         record_audio = False
@@ -565,6 +534,11 @@ def start(triggerword=False):
 
         while record_audio == False:
             time.sleep(.1)
+            if(GPIO.input(config['raspberrypi']['button'])==0):
+                print ("button detected")
+                button_pressed = True
+                #detect_button("Success")
+
             if triggerword:
                 if audioplaying: p.stop()
                 start = time.time()
@@ -572,28 +546,11 @@ def start(triggerword=False):
             elif button_pressed:
                 if audioplaying: p.stop
                 record_audio = True
-            #################### THIS IS POCKETSPHNIX PROCESS ################################
-            #     # Process microphone audio via PocketSphinx, listening for trigger word
-            #     while decoder.hyp() == None and button_pressed == False:
-            #         # Read from microphone
-            #         l, buf = inp.read()
-            #         # Detect if keyword/trigger word was said
-            #         decoder.process_raw(buf, False, False)
-            #
-            #     # if trigger word was said
-            #     if decoder.hyp() != None:
-            #         if audioplaying: p.stop()
-            #         start = time.time()
-            #         record_audio = True
-            #         play_audio(path + 'alexayes.mp3', 0)
-            #     elif button_pressed:
-            #         if audioplaying: p.stop()
-            #         record_audio = True
-            #
-            # do the following things if either the button has been pressed or the trigger word has been said
+
             if debug: print ("detected the edge, setting up audio")
             #
             # To avoid overflows close the microphone connection
+            button_pressed = False
             stream.close()
 
             # # clean up the temp directory
@@ -622,7 +579,7 @@ def setup():
     #GPIO.setup(lights, GPIO.OUT)
     #GPIO.output(lights, GPIO.LOW)
 
-    GPIO.init()	
+    GPIO.init()
     GPIO.setcfg(button, GPIO.INPUT)
     GPIO.pullup(button, GPIO.PULLUP)
     GPIO.setcfg(lights[0], GPIO.OUTPUT)
