@@ -6,7 +6,7 @@ do
 		# /etc/init.d/AlexaPi stop
 		sleep 3
 	elif ! pgrep python -a | grep main.py > /dev/null; then
-		/etc/init.d/AlexaPi silent
+		/etc/init.d/AlexaOPi silent
 		sleep 5
 	fi
 done

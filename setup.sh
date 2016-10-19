@@ -78,14 +78,14 @@ esac
 
 case $monitorAlexa in
         [nN] ) 
-		cp initd_alexa.sh /etc/init.d/AlexaPi
+		cp initd_alexa.sh /etc/init.d/AlexaOPi
 	;;
         * )
-		cp initd_alexa_monitored.sh /etc/init.d/AlexaPi
+		cp initd_alexa_monitored.sh /etc/init.d/AlexaOPi
         ;;
 esac
 
-update-rc.d AlexaPi defaults
+update-rc.d AlexaOPi defaults
 
 echo "--Creating creds.py--"
 echo "Enter your Device Type ID:"
