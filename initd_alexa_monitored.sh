@@ -21,12 +21,12 @@ start)
 
 silent)
     echo "Starting Alexa in silent mode..."
-    python /root/AlexaPi/main.py -s &
+    python /opt/AlexaPi/start.py /opt/AlexaPi/Artoo.pmdl &
 ;;
 
 stop)
     echo "Stopping Alexa.."
-    pkill -f AlexaPi\/main\.py
+    pkill -f AlexaPi\/start\.py
 ;;
 
 restart|force-reload)
