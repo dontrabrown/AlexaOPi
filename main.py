@@ -34,7 +34,6 @@ WAVE_OUTPUT_FILENAME = "recording.wav"
 audio = pyaudio.PyAudio()
 
 # Settings
-button = port.PA20  # GPIO Pin with button connected
 plb_light = port.PA9		# GPIO Pin for the playback/activity light
 rec_light = port.PA8		# GPIO Pin for the recording light
 lights = [plb_light, rec_light]  # GPIO Pins with LED's connected
@@ -74,7 +73,6 @@ streamurl = ""
 streamid = ""
 position = 0
 audioplaying = False
-button_pressed = False
 start = time.time()
 tunein_parser = tunein.TuneIn(5000)
 currVolume = 100
@@ -186,7 +184,7 @@ def alexa_speech_recognizer():
 
 def alexa_getnextitem(nav_token):
     # https://developer.amazon.com/public/solutions/alexa/alexa-voice-service/rest/audioplayer-getnextitem-request
-    time.sleep(0.5)
+    time.sleep(0.8)
     if audioplaying == False:
         if debug: print("{}Sending GetNextItem Request...{}".format(bcolors.OKBLUE, bcolors.ENDC))
         # GPIO.output(plb_light, GPIO.HIGH)
@@ -448,27 +446,7 @@ def state_callback(event, player):
         streamid = ""
         nav_token = ""
 
-
-def detect_button(channel):
-    global button_pressed
-    buttonPress = time.time()
-    button_pressed = True
-    if debug: print("{}Button Pressed! Recording...{}".format(bcolors.OKBLUE, bcolors.ENDC))
-    time.sleep(.5)  # time for the button input to settle down
-    while (GPIO.input(button) == 0):
-        button_pressed = True
-        time.sleep(.1)
-        if time.time() - buttonPress > 10:  # pressing button for 10 seconds triggers a system halt
-            play_audio(path + 'alexahalt.mp3')
-            if debug: print("{} -- 10 second putton press.  Shutting down. -- {}".format(bcolors.WARNING, bcolors.ENDC))
-            os.system("halt")
-    if debug: print("{}Recording Finished.{}".format(bcolors.OKBLUE, bcolors.ENDC))
-    button_pressed = False
-    time.sleep(.5)  # more time for the button to settle down
-
-
 def silence_listener(triggeredbyvoice):
-    global button_pressed
     # Reenable reading microphone raw data
     stream = audio.open(format=FORMAT,
                         channels=CHANNELS,
@@ -496,7 +474,7 @@ def silence_listener(triggeredbyvoice):
             data = stream.read(CHUNK, exception_on_overflow=False)
             framerec.append(data)
     else:
-        while button_pressed or ((time.time() - start) < MAX_RECORDING_LENGTH):
+        while ((time.time() - start) < MAX_RECORDING_LENGTH):
             data = stream.read(CHUNK, exception_on_overflow=False)
             framerec.append(data)
             GPIO.output(rec_light, GPIO.HIGH)
@@ -518,7 +496,7 @@ def silence_listener(triggeredbyvoice):
 
 
 def start(triggerword=False):
-    global audioplaying, p, button_pressed
+    global audioplaying, p
 
     while True:
         record_audio = False
@@ -534,23 +512,16 @@ def start(triggerword=False):
 
         while record_audio == False:
             time.sleep(.1)
-            if(GPIO.input(config['raspberrypi']['button'])==0):
-                print ("button detected")
-                button_pressed = True
-                #detect_button("Success")
+
 
             if triggerword:
                 if audioplaying: p.stop()
                 start = time.time()
                 record_audio = True
-            elif button_pressed:
-                if audioplaying: p.stop
-                record_audio = True
 
             if debug: print ("detected the edge, setting up audio")
             #
             # To avoid overflows close the microphone connection
-            button_pressed = False
             stream.close()
 
             # # clean up the temp directory
@@ -572,16 +543,7 @@ def start(triggerword=False):
 
 
 def setup():
-    #GPIO.setwarnings(False)
-    #GPIO.cleanup()
-    #GPIO.setmode(GPIO.BCM)
-    #GPIO.setup(button, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    #GPIO.setup(lights, GPIO.OUT)
-    #GPIO.output(lights, GPIO.LOW)
-
     GPIO.init()
-    GPIO.setcfg(button, GPIO.INPUT)
-    GPIO.pullup(button, GPIO.PULLUP)
     GPIO.setcfg(lights[0], GPIO.OUTPUT)
     GPIO.setcfg(lights[1], GPIO.OUTPUT)
 

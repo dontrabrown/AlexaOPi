@@ -1,4 +1,4 @@
-# AlexaPi
+# AlexaOPi (R2D2 version)
  
 ---
  
@@ -11,9 +11,13 @@
 ---
  
 This is the code needed to Turn an Orange Pi into a client for Amazon's Alexa service.
-Runs on voice activation, and responds to either Artoo or Alexa. Modify the init.d script accordingly for the Snowboy model. 
+Runs on voice activation, and responds to either Artoo or Alexa. Modify the init.d script accordingly for the Snowboy model of choice - default is Artoo.
 
-It will chirp and chime like an R2D2. 
+There's no button to press in this implementation.  
+
+It will chirp and chime like an R2D2. For your own voice models, go to kitt.ai/snowboy and grab your model or update mine. 
+
+Tested and should be working out of the box. Let me know if any issues. I will be moving to a Pocketsphinx implementation. 
 ---
  
 ### Requirements
@@ -22,7 +26,6 @@ You will need:
 * A Orange Pi PC or Orange Pi PC Plus
 * An SD Card with a fresh install of Armbian (tested against Armbian v.5.20 Jessie Desktop)
 * An External Speaker with 3.5mm Jack
-* (Optional) A push to make button connected between PA20 and GND
 * (Optional) A Dual colour LED (or 2 signle LEDs) Connected to GPIO PA8 & PA9
 
 Next you need to obtain a set of credentials from Amazon to use the Alexa Voice service, login at http://developer.amazon.com and Goto Alexa then Alexa Voice Service
@@ -31,14 +34,14 @@ Make a note of these credentials you will be asked for them during the install p
 
 ### Installation
 
-Boot your fresh Pi and login to a command prompt as root.
+Boot your fresh Pi and setup WiFi.
 
 Make sure you are in /opt
 
 Clone this repo to the Pi
 `git clone https://github.com/gadgetreactor/AlexaOPi.git`
 Run the setup script
-`./setup.sh`
+`sudo ./setup.sh`
 
 Follow instructions....
 
