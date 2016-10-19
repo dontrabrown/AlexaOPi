@@ -35,8 +35,24 @@ apt-get install wget git -y
 
 cd $cwd
 
-wget --output-document vlc.py "http://git.videolan.org/?p=vlc/bindings/python.git;a=blob_plain;f=generated/vlc.py;hb=HEAD"
-apt-get install python-dev swig libasound2-dev memcached python-pip python-alsaaudio vlc -y
+apt-get install python-dev libasound2-dev python-pip memcached vlc -y
+
+git clone https://github.com/duxingkei33/orangepi_PC_gpio_pyH3.git
+cd orangepi_PC_gpio_pyH3
+python orangepi_PC_gpio_pyH3/setup.py install 
+cd ..
+
+wget http://www.portaudio.com/archives/pa_stable_v19_20140130.tgz
+tar -xvzf pa_stable_v19_20140130.tgz
+cd portaudio
+./configure && make
+sudo make install
+cd ..
+
+rm -rf orangepi_PC_gpio_pyH3
+rm -rf portaudio
+rm -rf pa_stable_v19_20140130.tgzpa_stable_v19_20140130.tgz
+
 pip install -r requirements.txt
 touch /var/log/alexa.log
 
@@ -92,4 +108,8 @@ echo "Enter your Client Secret:"
 read secret
 echo Client_Secret = \"$secret\" >> creds.py
 
-python ./auth_web.py 
+python ./auth_web.py
+
+echo "Open http://$ip:5000"
+
+echo "You can now reboot"
